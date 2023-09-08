@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
                     it.seekTo(0)
                     vm.unPrepareMediaPlayer()
                     it.stop()
-                    it.prepareAsync()
+                    it.prepare()
                     changeCurrentTrackState(TrackState.STOPPED)
                 }
                 newMediaPlayer.setOnPreparedListener {
@@ -190,17 +190,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun changeTrackMP() {
+    fun changeTrackMP(_changing: Boolean) {
         mediaPlayer!!.reset()
         vm.unPrepareMediaPlayer()
         val newMediaPlayer = MediaPlayer.create(this,R.raw.wisdom)
-        var changing = true
+        var changing = _changing
         var afterStop = false
         newMediaPlayer.setOnCompletionListener {
             it.seekTo(0)
             vm.unPrepareMediaPlayer()
             it.stop()
-            it.prepareAsync()
+            it.prepare()
             changeCurrentTrackState(TrackState.STOPPED)
         }
         newMediaPlayer.setOnPreparedListener {
@@ -252,7 +252,7 @@ class MainActivity : AppCompatActivity() {
         // TODO
         if (vm.currentTrack.value?.song?.id != track.song.id) {
             vm.selectCurrentTrack(track)
-            changeTrackMP()
+            changeTrackMP(true)
         } else {
             vm.selectCurrentTrack(track)
             if (mediaPlayer?.isPlaying != true) mediaPlayer?.start()
@@ -279,7 +279,7 @@ class MainActivity : AppCompatActivity() {
                 val selectedPlaylist = getPlaylistByName(adapter.getItem(position)!!)
                 if (vm.playerState.value == PlayerState.PLAY_MUSIC) {
                     if (vm.setCurrentPlaylist(selectedPlaylist.name,selectedPlaylist.songs)) {
-                        changeTrackMP()
+                        changeTrackMP(false)
                     }
                 } else {
                     val alreadySelected = getSelectedSongs()

@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import kotlin.concurrent.thread
 
@@ -54,17 +55,21 @@ class MainPlayerControllerFragment : Fragment() {
                 activity.changeCurrentTrackState(TrackState.PLAYING)
             }
 
-            if (activity.mediaPlayer!!.isPlaying) {
-                activity.mediaPlayer!!.pause()
+            if (activity.mediaPlayer != null){
+                if (activity.mediaPlayer!!.isPlaying) {
+                    activity.mediaPlayer!!.pause()
+                } else {
+                    activity.mediaPlayer!!.start()
+                }
             } else {
-                activity.mediaPlayer!!.start()
+                Toast.makeText(activity, "You should find some songs at first", Toast.LENGTH_LONG).show()
             }
         }
 
         controllerBtnStop.setOnClickListener {
             activity.mediaPlayer?.stop()
             activity.changeCurrentTrackState(TrackState.STOPPED)
-            activity.mediaPlayer?.prepareAsync()
+            activity.mediaPlayer?.prepare()
             seekBar.progress = 0
             currentTime.text = 0L.toFormattedTime()
 
@@ -100,12 +105,12 @@ class MainPlayerControllerFragment : Fragment() {
         }
 
         activity.vm.mediaPlayerState.observe(activity) {
-            if (it) startUpdatingSeekBar(activity.mediaPlayer)
+            if (it) startUpdatingSeekBar(activity.mediaPlayer, activity)
         }
 
     }
 
-    fun startUpdatingSeekBar(mediaPlayer: MediaPlayer?) {
+    fun startUpdatingSeekBar(mediaPlayer: MediaPlayer?, activity: MainActivity) {
         totalTime.text = (215000).toLong().toFormattedTime()/*(mediaPlayer?.duration?.toLong()
             ?: 0L).toFormattedTime()*/
         //seekBar.max = mediaPlayer!!.duration / 1000
@@ -117,13 +122,13 @@ class MainPlayerControllerFragment : Fragment() {
 
             handler.postDelayed(object : Runnable {
                 override fun run() {
-                    if (mediaPlayer != null && !isUserSeeking /*&& mediaPlayer.isPlaying*/) {
+                    if (mediaPlayer != null && !isUserSeeking && activity.vm.mediaPlayerState.value!!) {
                         val currentTimeMillis = if (mediaPlayer.currentPosition % 1000 > 0) mediaPlayer.currentPosition + mediaPlayer.currentPosition % 1000 else mediaPlayer.currentPosition
                         seekBar.progress = currentTimeMillis / 1000 //TODO
                         currentTime.text =
                             (currentTimeMillis.toLong()).toFormattedTime() // TODO
                     }
-                    handler.postDelayed(this, 500) // Update every second
+                    handler.postDelayed(this, 100) // Update every second
                 }
 
             }, 0)
