@@ -78,8 +78,8 @@ class MainPlayerControllerFragment : Fragment() {
             override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
                     activity.mediaPlayer?.seekTo(progress*1000) //TODO
-                    currentTime.text =
-                        activity.mediaPlayer?.currentPosition?.toLong()?.toFormattedTime() // TODO
+                    currentTime.text = (progress.toLong() * 1000).toFormattedTime()
+                     // TODO
                 }
             }
 
@@ -88,6 +88,7 @@ class MainPlayerControllerFragment : Fragment() {
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
+
                 isUserSeeking = false
             }
         })
@@ -97,8 +98,8 @@ class MainPlayerControllerFragment : Fragment() {
         activity.vm.currentTrack.observe(activity) {
             // TODO maybe it worth to replace all seekBars features inside startUpdatingSeekbar
             if (activity.mediaPlayer != null) {
-                val duration = activity.mediaPlayer!!.duration
-                seekBar.max = 215000 / 1000/*activity.mediaPlayer!!.duration / 1000 + 1*/
+               // val duration = activity.mediaPlayer!!.duration
+                seekBar.max = if (activity.mediaPlayer!!.duration % 1000 > 0) activity.mediaPlayer!!.duration / 1000 else activity.mediaPlayer!!.duration / 1000 +1/*activity.mediaPlayer!!.duration / 1000 + 1*/
                // if (activity.vm.mediaPlayerState.value!!) startUpdatingSeekBar(activity.mediaPlayer)
                 // startUpdatingSeekBar(activity.mediaPlayer)
             }
@@ -123,7 +124,7 @@ class MainPlayerControllerFragment : Fragment() {
             handler.postDelayed(object : Runnable {
                 override fun run() {
                     if (mediaPlayer != null && !isUserSeeking && mediaPlayer.isPlaying) {
-                        val currentTimeMillis = if (mediaPlayer.currentPosition % 1000 > 0) mediaPlayer.currentPosition + 1000 else mediaPlayer.currentPosition
+                        val currentTimeMillis = if (mediaPlayer.currentPosition % 1000 > 0) mediaPlayer.currentPosition + mediaPlayer.currentPosition % 1000 else mediaPlayer.currentPosition
                         seekBar.progress = currentTimeMillis / 1000 //TODO
                         currentTime.text =
                             (currentTimeMillis.toLong()).toFormattedTime() // TODO

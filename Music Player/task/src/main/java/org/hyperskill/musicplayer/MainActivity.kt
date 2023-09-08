@@ -70,9 +70,9 @@ class MainActivity : AppCompatActivity() {
                 var init = true
 
                 newMediaPlayer.setOnCompletionListener {
+                    it.seekTo(0)
                     vm.unPrepareMediaPlayer()
                     it.stop()
-                    it.seekTo(0)
                     it.prepareAsync()
                 }
                 newMediaPlayer.setOnPreparedListener {
@@ -196,8 +196,8 @@ class MainActivity : AppCompatActivity() {
         var changing = true
         var afterStop = false
         newMediaPlayer.setOnCompletionListener {
-            vm.unPrepareMediaPlayer()
             it.seekTo(0)
+            vm.unPrepareMediaPlayer()
             it.stop()
             it.prepareAsync()
         }
