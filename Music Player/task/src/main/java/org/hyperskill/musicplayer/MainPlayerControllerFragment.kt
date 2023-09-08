@@ -1,6 +1,5 @@
 package org.hyperskill.musicplayer
 
-import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
@@ -21,6 +20,7 @@ class MainPlayerControllerFragment : Fragment() {
 
     private lateinit var seekBar: SeekBar
     private lateinit var currentTime: TextView
+    private lateinit var totalTime: TextView
     private lateinit var handler: Handler
     private var isUserSeeking = false // allow us to stop updating SeekBar when user touches seekbar
 
@@ -45,7 +45,7 @@ class MainPlayerControllerFragment : Fragment() {
         val controllerBtnPlayPause = view.findViewById<Button>(R.id.controllerBtnPlayPause)
         val controllerBtnStop = view.findViewById<Button>(R.id.controllerBtnStop)
         currentTime = view.findViewById<TextView>(R.id.controllerTvCurrentTime)
-        val totalTime = view.findViewById<TextView>(R.id.controllerTvTotalTime)
+        totalTime = view.findViewById<TextView>(R.id.controllerTvTotalTime)
 
         controllerBtnPlayPause.setOnClickListener {
             if (activity.getCurrentTrackState() == TrackState.PLAYING) {
@@ -62,12 +62,14 @@ class MainPlayerControllerFragment : Fragment() {
         }
 
         controllerBtnStop.setOnClickListener {
-            activity.mediaPlayer?.seekTo(0)
+           // activity.mediaPlayer?.seekTo(0)
             activity.mediaPlayer?.stop()
             activity.changeCurrentTrackState(TrackState.STOPPED)
+            //activity.mediaPlayer?.seekTo(0) // TODO !!!WARNING
             activity.mediaPlayer?.prepareAsync()
             seekBar.progress = 0
             currentTime.text = 0L.toFormattedTime()
+
         }
 
         seekBar = view.findViewById<SeekBar>(R.id.controllerSeekBar)
@@ -93,36 +95,44 @@ class MainPlayerControllerFragment : Fragment() {
         handler = Handler(Looper.getMainLooper())
 
         activity.vm.currentTrack.observe(activity) {
-            // TODO
+            // TODO maybe it worth to replace all seekBars features inside startUpdatingSeekbar
             if (activity.mediaPlayer != null) {
-                seekBar.max = activity.mediaPlayer!!.duration / 1000
-                //startUpdatingSeekBar(activity.mediaPlayer)
+                val duration = activity.mediaPlayer!!.duration
+                seekBar.max = 215000 / 1000/*activity.mediaPlayer!!.duration / 1000 + 1*/
+               // if (activity.vm.mediaPlayerState.value!!) startUpdatingSeekBar(activity.mediaPlayer)
                 // startUpdatingSeekBar(activity.mediaPlayer)
             }
         }
 
         activity.vm.mediaPlayerState.observe(activity) {
-            startUpdatingSeekBar(activity.mediaPlayer)
+             if (it) startUpdatingSeekBar(activity.mediaPlayer)
         }
 
     }
 
     fun startUpdatingSeekBar(mediaPlayer: MediaPlayer?) {
+        totalTime.text = (215000).toLong().toFormattedTime()/*(mediaPlayer?.duration?.toLong()
+            ?: 0L).toFormattedTime()*/
+        //seekBar.max = mediaPlayer!!.duration / 1000
+        //seekBar.progress = (mediaPlayer!!.currentPosition) / 1000
+
         thread {
             // TODO
             handler.removeCallbacksAndMessages(null)
+
             handler.postDelayed(object : Runnable {
                 override fun run() {
-                        if (mediaPlayer != null && !isUserSeeking && mediaPlayer.isPlaying) {
-                            seekBar.progress = mediaPlayer.currentPosition / 1000  //TODO
-                            currentTime.text =
-                                (mediaPlayer?.currentPosition?.toLong()
-                                    ?: 0L).toFormattedTime() // TODO
-                        }
+                    if (mediaPlayer != null && !isUserSeeking && mediaPlayer.isPlaying) {
+                        val currentTimeMillis = if (mediaPlayer.currentPosition % 1000 > 0) mediaPlayer.currentPosition + 1000 else mediaPlayer.currentPosition
+                        seekBar.progress = currentTimeMillis / 1000 //TODO
+                        currentTime.text =
+                            (currentTimeMillis.toLong()).toFormattedTime() // TODO
+                    }
                     handler.postDelayed(this, 1000) // Update every second
                 }
 
             }, 0)
         }
+
     }
 }

@@ -65,8 +65,9 @@ class MainActivity : AppCompatActivity() {
         searchBtn.setOnClickListener {
             if (mediaPlayer == null) {
 
-                vm.unPrepareMediaPlayer()
+                //vm.unPrepareMediaPlayer()
                 val newMediaPlayer = MediaPlayer.create(this,R.raw.wisdom)
+                var init = true
 
                 newMediaPlayer.setOnCompletionListener {
                     vm.unPrepareMediaPlayer()
@@ -75,11 +76,12 @@ class MainActivity : AppCompatActivity() {
                     it.prepareAsync()
                 }
                 newMediaPlayer.setOnPreparedListener {
-                    // New MediaPlayer is prepared and ready
+                    if (init) mediaPlayer = newMediaPlayer
+                    init = false
                     vm.prepareMediaPlayer()
-                    mediaPlayer = newMediaPlayer // Set the mutable var to the new instance
+                    it.seekTo(0) // WARNING
+                     // Set the mutable var to the new instance
                 }
-
             }
 
             val foundSongs = findSongs()// implement here finding functionality
@@ -189,10 +191,10 @@ class MainActivity : AppCompatActivity() {
 
     fun changeTrackMP() {
         mediaPlayer!!.reset()
-
         vm.unPrepareMediaPlayer()
         val newMediaPlayer = MediaPlayer.create(this,R.raw.wisdom)
         var changing = true
+        var afterStop = false
         newMediaPlayer.setOnCompletionListener {
             vm.unPrepareMediaPlayer()
             it.seekTo(0)
@@ -200,11 +202,14 @@ class MainActivity : AppCompatActivity() {
             it.prepareAsync()
         }
         newMediaPlayer.setOnPreparedListener {
-            mediaPlayer = newMediaPlayer
+            if (!afterStop) mediaPlayer = newMediaPlayer
             if (changing) {
                 mediaPlayer!!.start()
+            } else {
+                it.seekTo(0) // WARNING
             }
             changing = false
+            afterStop = true
             vm.prepareMediaPlayer()
         }
     }
