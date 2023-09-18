@@ -53,7 +53,7 @@ class MainPlayerControllerFragment : Fragment() {
             } else {
                 activity.changeCurrentTrackState(TrackState.PLAYING)
             }
-            //TODO
+
             if (activity.mediaPlayer!!.isPlaying) {
                 activity.mediaPlayer!!.pause()
             } else {
@@ -62,10 +62,8 @@ class MainPlayerControllerFragment : Fragment() {
         }
 
         controllerBtnStop.setOnClickListener {
-           // activity.mediaPlayer?.seekTo(0)
             activity.mediaPlayer?.stop()
             activity.changeCurrentTrackState(TrackState.STOPPED)
-            //activity.mediaPlayer?.seekTo(0) // TODO !!!WARNING
             activity.mediaPlayer?.prepareAsync()
             seekBar.progress = 0
             currentTime.text = 0L.toFormattedTime()
@@ -77,9 +75,8 @@ class MainPlayerControllerFragment : Fragment() {
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
-                    activity.mediaPlayer?.seekTo(progress*1000) //TODO
+                    activity.mediaPlayer?.seekTo(progress*1000)
                     currentTime.text = (progress.toLong() * 1000).toFormattedTime()
-                     // TODO
                 }
             }
 
@@ -88,7 +85,6 @@ class MainPlayerControllerFragment : Fragment() {
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar) {
-
                 isUserSeeking = false
             }
         })
@@ -98,10 +94,8 @@ class MainPlayerControllerFragment : Fragment() {
         activity.vm.currentTrack.observe(activity) {
             // TODO maybe it worth to replace all seekBars features inside startUpdatingSeekbar
             if (activity.mediaPlayer != null) {
-               // val duration = activity.mediaPlayer!!.duration
-                seekBar.max = if (activity.mediaPlayer!!.duration % 1000 > 0) activity.mediaPlayer!!.duration / 1000 else activity.mediaPlayer!!.duration / 1000 +1/*activity.mediaPlayer!!.duration / 1000 + 1*/
-               // if (activity.vm.mediaPlayerState.value!!) startUpdatingSeekBar(activity.mediaPlayer)
-                // startUpdatingSeekBar(activity.mediaPlayer)
+                val duration = activity.mediaPlayer!!.duration
+                seekBar.max = if (duration % 1000 > 0) duration / 1000 else duration / 1000 + 1
             }
         }
 
