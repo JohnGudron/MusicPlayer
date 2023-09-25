@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
                     it.seekTo(0)
                     vm.unPrepareMediaPlayer()
                     it.stop()
-                    it.prepareAsync()
+                    it.prepare()
                 }
                 newMediaPlayer.setOnPreparedListener {
                     if (init) mediaPlayer = newMediaPlayer
@@ -199,7 +199,7 @@ class MainActivity : AppCompatActivity() {
             it.seekTo(0)
             vm.unPrepareMediaPlayer()
             it.stop()
-            it.prepareAsync()
+            it.prepare()
         }
         newMediaPlayer.setOnPreparedListener {
             if (!afterStop) mediaPlayer = newMediaPlayer
