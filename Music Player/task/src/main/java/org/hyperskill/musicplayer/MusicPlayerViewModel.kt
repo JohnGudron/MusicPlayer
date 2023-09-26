@@ -64,7 +64,7 @@ class MusicPlayerViewModel : ViewModel() {
         updatePlaylist(PlayList("All Songs", allSongs.value!!))
     }
 
-    fun setCurrentPlaylist(name: String, songs: List<Song>) {
+    fun setCurrentPlaylist(name: String, songs: List<Song>): Boolean {
         val tracks = songs.map { Track(it, TrackState.STOPPED) }
         var setCurrentTrack = true
         tracks.forEach {
@@ -76,6 +76,8 @@ class MusicPlayerViewModel : ViewModel() {
         }
         if (setCurrentTrack) _currentTrack.value = tracks.first() // no need to use selectCurrentTrack fun cause changing current track won't affect other entities
         _currentPlaylist.value = Pair(name,tracks)
+
+        return setCurrentTrack // need for changing track in MP
     }
 
     fun setSelectorPlaylist(name: String, songs: List<SongSelector>) {
