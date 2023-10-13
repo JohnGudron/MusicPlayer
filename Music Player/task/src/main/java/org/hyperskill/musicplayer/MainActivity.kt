@@ -90,10 +90,11 @@ class MainActivity : AppCompatActivity() {
 
         val searchBtn = findViewById<Button>(R.id.mainButtonSearch)
         searchBtn.setOnClickListener {
+            val foundSongs = findSongs(query)// implement here finding functionality
             if (mediaPlayer == null) {
-
                 vm.unPrepareMediaPlayer()
-                val newMediaPlayer = MediaPlayer.create(this,R.raw.wisdom)
+                // TODO check case when nothing found
+                val newMediaPlayer = MediaPlayer.create(this,ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, foundSongs[0].id ))
                 var init = true
 
                 newMediaPlayer.setOnCompletionListener {
@@ -108,11 +109,9 @@ class MainActivity : AppCompatActivity() {
                     init = false
                     vm.prepareMediaPlayer()
                     it.seekTo(0) // WARNING
-                     // Set the mutable var to the new instance
+                    // Set the mutable var to the new instance
                 }
             }
-
-            val foundSongs = findSongs(query)// implement here finding functionality
             vm.updateAllSongs(foundSongs)
             when (vm.playerState.value) {
                 PlayerState.PLAY_MUSIC -> {
@@ -245,18 +244,20 @@ class MainActivity : AppCompatActivity() {
     fun changeTrackMP(_changing: Boolean) {
         mediaPlayer!!.reset()
         vm.unPrepareMediaPlayer()
-        val newMediaPlayer = MediaPlayer.create(this,R.raw.wisdom)
+        mediaPlayer!!.setDataSource(this,ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, vm.currentTrack.value!!.song.id))
+        mediaPlayer!!.prepare()
+        //val newMediaPlayer = MediaPlayer.create(this,R.raw.wisdom)
         var changing = _changing
         var afterStop = false
-        newMediaPlayer.setOnCompletionListener {
+        /*newMediaPlayer.setOnCompletionListener {
             it.seekTo(0)
             vm.unPrepareMediaPlayer()
             it.stop()
             it.prepare()
             changeCurrentTrackState(TrackState.STOPPED)
-        }
-        newMediaPlayer.setOnPreparedListener {
-            if (!afterStop) mediaPlayer = newMediaPlayer
+        }*/
+        mediaPlayer!!.setOnPreparedListener {
+            //if (!afterStop) mediaPlayer = newMediaPlayer
             if (changing) {
                 mediaPlayer!!.start()
             } else {
@@ -266,6 +267,7 @@ class MainActivity : AppCompatActivity() {
             afterStop = true
             vm.prepareMediaPlayer()
         }
+
     }
 
     fun changeCurrentTrackState(newState: TrackState) {
