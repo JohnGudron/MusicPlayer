@@ -4,9 +4,7 @@ import android.Manifest
 import android.app.AlertDialog
 import android.content.ContentUris
 import android.content.pm.PackageManager
-import android.database.Cursor
 import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -21,37 +19,31 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentContainerView
-import androidx.fragment.app.findFragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.lang.IllegalStateException
 
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
-    lateinit var adapter: SongRecyclerAdapter
+    private lateinit var adapter: SongRecyclerAdapter
     private lateinit var loadDialogAdapter: ArrayAdapter<String>
     private lateinit var deleteDialogAdapter: ArrayAdapter<String>
     private lateinit var loadDialog: AlertDialog
     private lateinit var deleteDialog: AlertDialog
     private lateinit var fragmentContainer: FragmentContainerView
-    //var query: Cursor? = null
     var mediaPlayer: MediaPlayer? = null
     val vm: MusicPlayerViewModel by viewModels()
-
-
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-
-
-
         // Recycler View initiating
         adapter = SongRecyclerAdapter(vm.playerState.value!!, ::onItemPlayPauseBtnLongClick, ::onItemPlayPauseBtnClick)
-        recyclerView = findViewById<RecyclerView>(R.id.mainSongList)
+        recyclerView = findViewById(R.id.mainSongList)
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL,false)
 
@@ -78,7 +70,6 @@ class MainActivity : AppCompatActivity() {
             when {
                 ContextCompat.checkSelfPermission(this.applicationContext, Manifest.permission.READ_EXTERNAL_STORAGE) ==
                         PackageManager.PERMISSION_GRANTED -> {
-                    //Toast.makeText(this, "Storage permission is granted", Toast.LENGTH_SHORT).show()
                     val foundSongs = findSongs()// implement here finding functionality
                     if (mediaPlayer == null) {
                         vm.unPrepareMediaPlayer()
@@ -105,15 +96,17 @@ class MainActivity : AppCompatActivity() {
                     when (vm.playerState.value) {
                         PlayerState.PLAY_MUSIC -> {
                             // TODO need to find all cases of changing current track (I think only in setCurrentPlaylist fun maybe)
-                            vm.setCurrentPlaylist("All Songs", vm.allSongs.value ?: emptyList<Song>())
+                            vm.setCurrentPlaylist("All Songs", vm.allSongs.value ?: emptyList())
                         }
 
                         PlayerState.ADD_PLAYLIST -> {
                             vm.setSelectorPlaylist(
                                 "All Songs",
                                 vm.allSongs.value?.map { SongSelector(it, SelectState.NOT_SELECTED) }
-                                    ?: emptyList<SongSelector>())
+                                    ?: emptyList())
                         }
+
+                        null -> throw IllegalStateException("Something went completely wrong with Player state")
                     }
 
                 }
@@ -147,7 +140,7 @@ class MainActivity : AppCompatActivity() {
             adapter.updateDataAndState(playlist.second, vm.playerState.value!!)
         }
 
-        vm.currentSelectorlist.observe(this) { playlist ->
+        vm.currentSelectorList.observe(this) { playlist ->
             adapter.updateDataAndState(playlist.second, vm.playerState.value!!)
         }
 
@@ -183,16 +176,17 @@ class MainActivity : AppCompatActivity() {
                     vm.updateAllSongs(foundSongs)
                     when (vm.playerState.value) {
                         PlayerState.PLAY_MUSIC -> {
-                            // TODO need to find all cases of changing current track (I think only in setCurrentPlaylist fun maybe)
-                            vm.setCurrentPlaylist("All Songs", vm.allSongs.value ?: emptyList<Song>())
+                            vm.setCurrentPlaylist("All Songs", vm.allSongs.value ?: emptyList())
                         }
 
                         PlayerState.ADD_PLAYLIST -> {
                             vm.setSelectorPlaylist(
                                 "All Songs",
                                 vm.allSongs.value?.map { SongSelector(it, SelectState.NOT_SELECTED) }
-                                    ?: emptyList<SongSelector>())
+                                    ?: emptyList())
                         }
+
+                        null -> throw IllegalStateException("Something went completely wrong with Player state")
                     }
                 } else {
                     Toast.makeText(this, "Songs cannot be loaded without permission", Toast.LENGTH_LONG).show()
@@ -213,7 +207,7 @@ class MainActivity : AppCompatActivity() {
         when (item.itemId) {
             R.id.mainMenuAddPlaylist -> {
                 if (vm.playerState.value != PlayerState.ADD_PLAYLIST) {
-                    if ((vm.allSongs.value ?: emptyList<Song>()).isEmpty()) {
+                    if ((vm.allSongs.value ?: emptyList()).isEmpty()) {
                         Toast.makeText(
                             this,
                             "no songs loaded, click search to load songs",
@@ -236,9 +230,7 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    // This fun for finding songs in DBMS
-    fun findSongs(): List<Song> {
-        //TODO
+    private fun findSongs(): List<Song> {
         val songs = mutableListOf<Song>()
         val uri =
             if (Build.VERSION.SDK_INT >= 29) {
@@ -284,19 +276,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         return songs
-
-        /*return listOf(
-            Song(1,"title1", "artist1", 215000),
-            Song(2,"title2", "artist2", 215000),
-            Song(3,"title3", "artist3", 215000),
-            Song(4,"title4", "artist4", 215000),
-            Song(5,"title5", "artist5", 215000),
-            Song(6,"title6", "artist6", 215000),
-            Song(7,"title7", "artist7", 215000),
-            Song(8,"title8", "artist8", 215000),
-            Song(9,"title9", "artist9", 215000),
-            Song(10,"title10", "artist10", 215000)
-        )*/
     }
 
     // This fun change current mode to mode received in argument
@@ -304,41 +283,28 @@ class MainActivity : AppCompatActivity() {
         if (mode == PlayerState.PLAY_MUSIC) {
             vm.changePlayerState(PlayerState.PLAY_MUSIC)
             displayPlayerControlFragment()
-            findViewById<Button>(R.id.tempBtn).text = vm.playerState.value.toString()
         } else {
             vm.changePlayerState(PlayerState.ADD_PLAYLIST)
             displayAddPlaylistFragment()
-            findViewById<Button>(R.id.tempBtn).text = vm.playerState.value.toString()
         }
     }
 
-    fun changeTrackMP(_changing: Boolean) {
+    private fun changeTrackMP(_changing: Boolean) {
         mediaPlayer!!.reset()
         vm.unPrepareMediaPlayer()
         mediaPlayer!!.setDataSource(this,ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, vm.currentTrack.value!!.song.id))
         mediaPlayer!!.prepare()
-        //val newMediaPlayer = MediaPlayer.create(this,R.raw.wisdom)
         var changing = _changing
-        var afterStop = false
-        /*newMediaPlayer.setOnCompletionListener {
-            it.seekTo(0)
-            vm.unPrepareMediaPlayer()
-            it.stop()
-            it.prepare()
-            changeCurrentTrackState(TrackState.STOPPED)
-        }*/
+
         mediaPlayer!!.setOnPreparedListener {
-            //if (!afterStop) mediaPlayer = newMediaPlayer
             if (changing) {
                 mediaPlayer!!.start()
             } else {
                 it.seekTo(0) // WARNING
             }
             changing = false
-            afterStop = true
             vm.prepareMediaPlayer()
         }
-
     }
 
     fun changeCurrentTrackState(newState: TrackState) {
@@ -357,7 +323,7 @@ class MainActivity : AppCompatActivity() {
         vm.addPlaylist(PlayList(name,songs))
     }
 
-    fun getPlaylistByName(name:String): PlayList {
+    private fun getPlaylistByName(name:String): PlayList {
         return vm.selectPlaylist(name)
     }
 
@@ -374,7 +340,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onItemPlayPauseBtnClick(track: Track) {
-        // TODO
         if (vm.currentTrack.value?.song?.id != track.song.id) {
             vm.selectCurrentTrack(track)
             changeTrackMP(true)
@@ -397,7 +362,7 @@ class MainActivity : AppCompatActivity() {
         return (adapter.data as List<SongSelector>).filter { it.state == SelectState.IS_SELECTED }.map { it.song }
     }
 
-    fun createLoadDialog(adapter: ArrayAdapter<String>): AlertDialog {
+    private fun createLoadDialog(adapter: ArrayAdapter<String>): AlertDialog {
         return AlertDialog.Builder(this).setTitle("choose playlist to load")
             .setNegativeButton("cancel", null)
             .setAdapter(adapter) { _, position ->
@@ -418,22 +383,22 @@ class MainActivity : AppCompatActivity() {
             .create()
     }
 
-    fun createDeleteDialog(adapter: ArrayAdapter<String>): AlertDialog {
+    private fun createDeleteDialog(adapter: ArrayAdapter<String>): AlertDialog {
         return AlertDialog.Builder(this).setTitle("choose playlist to delete")
             .setNegativeButton("cancel", null)
             .setAdapter(adapter) { _, position ->
                 val selectedPlaylist = getPlaylistByName(adapter.getItem(position)!!)
                 if (selectedPlaylist.name == vm.currentPlaylist.value?.first) {
-                    vm.setCurrentPlaylist("All Songs", vm.allSongs.value ?: emptyList<Song>())
+                    vm.setCurrentPlaylist("All Songs", vm.allSongs.value ?: emptyList())
                 }
-                if (selectedPlaylist.name == vm.currentSelectorlist.value?.first) {
+                if (selectedPlaylist.name == vm.currentSelectorList.value?.first) {
                     vm.setSelectorPlaylist(
                         "All Songs",
                         vm.allSongs.value?.map { SongSelector(it, SelectState.NOT_SELECTED) }
-                            ?: emptyList<SongSelector>())
+                            ?: emptyList())
                 }
                 vm.deletePlaylistByName(selectedPlaylist.name)
-                // TODO Just a reminder that there maybe an error, cause observers triggered "data" property inside recyclerView adapter
+                // !Just a reminder that there maybe an error, cause observers triggered "data" property inside recyclerView adapter
             }
             .create()
     }

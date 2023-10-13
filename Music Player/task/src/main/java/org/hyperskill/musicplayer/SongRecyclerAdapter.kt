@@ -7,9 +7,7 @@ import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.ImageButton
 import android.widget.TextView
-import androidx.lifecycle.LiveData
 import androidx.recyclerview.widget.RecyclerView
-import java.nio.channels.Selector
 
 class SongRecyclerAdapter(
     playerState: PlayerState,
@@ -18,10 +16,8 @@ class SongRecyclerAdapter(
 )
     : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    //var tracks = songList.map { Track(it, TrackState.STOPPED) }
-    //var selectors = songList.map {SongSelector(it, SelectState.NOT_SELECTED)}
     var data: List<PlayerItemType> = emptyList()
-    var state = playerState
+    private var state = playerState
 
     companion object {
         private const val PLAY_VIEW = 1
@@ -47,7 +43,6 @@ class SongRecyclerAdapter(
         return when (data[position]) {
             is SongSelector -> SELECTOR_VIEW
             is Track -> PLAY_VIEW
-            else -> throw IllegalArgumentException("Invalid data type at position $position")
         }
     }
 
@@ -88,28 +83,10 @@ class SongRecyclerAdapter(
 
     fun updateDataAndState(items: List<PlayerItemType>, newState: PlayerState) {
         data = items
-        if (state!= newState) state = newState
+        if (state != newState) state = newState
         notifyDataSetChanged()
     }
-    }
-
-    /*fun updateTrackList(trackList: List<Track>) {
-        tracks = trackList
-        notifyDataSetChanged()
-    }
-
-    fun updateSelectorList(songList: List<Song>) {
-        selectors = songList.map { (SongSelector(it, SelectState.NOT_SELECTED)) }
-        notifyDataSetChanged()
-    }*/
-
-
-
-    /*fun updateState(newState: PlayerState) {
-
-        notifyDataSetChanged()
-    }*/
-
+}
 
 class SongViewHolder(songView: View) : RecyclerView.ViewHolder(songView) {
     val playBtn: ImageButton = songView.findViewById(R.id.songItemImgBtnPlayPause)

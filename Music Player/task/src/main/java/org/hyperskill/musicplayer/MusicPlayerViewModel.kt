@@ -1,7 +1,5 @@
 package org.hyperskill.musicplayer
 
-import android.content.Context
-import android.media.MediaPlayer
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -12,23 +10,23 @@ class MusicPlayerViewModel : ViewModel() {
     private val _currentPlaylist = MutableLiveData<Pair<String, List<Track>>>()
     val currentPlaylist: LiveData<Pair<String, List<Track>>> get() = _currentPlaylist
 
-    private val _currentSelectorlist = MutableLiveData<Pair<String, List<SongSelector>>>()
-    val currentSelectorlist: LiveData<Pair<String, List<SongSelector>>> get() = _currentSelectorlist
+    private val _currentSelectorList = MutableLiveData<Pair<String, List<SongSelector>>>()
+    val currentSelectorList: LiveData<Pair<String, List<SongSelector>>> get() = _currentSelectorList
 
     private val _allSongs = MutableLiveData<List<Song>>(emptyList())
     val allSongs: LiveData<List<Song>> get() = _allSongs
 
-    private val _allPlaylists = MutableLiveData<List<PlayList>>(listOf(PlayList("All Songs", allSongs.value!!)))
+    private val _allPlaylists = MutableLiveData(listOf(PlayList("All Songs", allSongs.value!!)))
     val allPlaylists: LiveData<List<PlayList>> get() = _allPlaylists
 
     // same scheme as for currentPlaylist
     private val _currentTrack = MutableLiveData<Track?>()
     val currentTrack: LiveData<Track?> get() = _currentTrack
 
-    private val _playerState = MutableLiveData<PlayerState>(PlayerState.PLAY_MUSIC)
+    private val _playerState = MutableLiveData(PlayerState.PLAY_MUSIC)
     val playerState: LiveData<PlayerState> get() = _playerState
 
-    private val _mediaPlayerPrepared = MutableLiveData<Boolean>(false)
+    private val _mediaPlayerPrepared = MutableLiveData(false)
     val mediaPlayerState: LiveData<Boolean> get() = _mediaPlayerPrepared
 
     fun prepareMediaPlayer() {
@@ -47,7 +45,7 @@ class MusicPlayerViewModel : ViewModel() {
         _allPlaylists.value = (_allPlaylists.value ?: emptyList()) - selectPlaylist(name)
     }
 
-    fun updatePlaylist(updatedPlaylist: PlayList) {
+    private fun updatePlaylist(updatedPlaylist: PlayList) {
         val currentPlaylists = _allPlaylists.value ?: emptyList()
         val updatedList = currentPlaylists.map { playlist ->
             if (playlist.name == updatedPlaylist.name) {
@@ -86,7 +84,7 @@ class MusicPlayerViewModel : ViewModel() {
             // saving current track state
             if (it.song.id == currentTrack.value?.song?.id) it.state = currentTrack.value!!.state
         }*/
-        _currentSelectorlist.value = Pair(name,songs)
+        _currentSelectorList.value = Pair(name,songs)
     }
 
     private fun changeTrackState(track: Track, newState: TrackState) {
