@@ -2,6 +2,7 @@ package org.hyperskill.musicplayer
 
 import android.app.AlertDialog
 import android.content.ContentUris
+import android.database.Cursor
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
@@ -37,6 +38,32 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val uri =
+            if (Build.VERSION.SDK_INT >= 29) {
+                MediaStore.Audio.Media.getContentUri(
+                    MediaStore.VOLUME_EXTERNAL
+                )
+            } else {
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            }
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DURATION
+        )
+        val selection = ""
+        val selectionArgs = arrayOf<String>()
+        val sortOrder = ""
+        val query = applicationContext.contentResolver.query(
+            uri,
+            projection,
+            selection,
+            selectionArgs,
+            sortOrder
+        )
+
 
         // Recycler View initiating
         adapter = SongRecyclerAdapter(vm.playerState.value!!, ::onItemPlayPauseBtnLongClick, ::onItemPlayPauseBtnClick)
@@ -85,7 +112,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            val foundSongs = findSongs()// implement here finding functionality
+            val foundSongs = findSongs(query)// implement here finding functionality
             vm.updateAllSongs(foundSongs)
             when (vm.playerState.value) {
                 PlayerState.PLAY_MUSIC -> {
@@ -161,9 +188,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     // This fun for finding songs in DBMS
-    fun findSongs(): List<Song> {
+    fun findSongs(query: Cursor?): List<Song> {
         //TODO
-        return listOf(
+        val songs = mutableListOf<Song>()
+        query?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+            val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+            val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+
+            while (cursor.moveToNext()) {
+                // Then, we get the values of columns for a given image.
+                val id = cursor.getLong(idColumn)
+                val name = cursor.getString(nameColumn)
+                val artist = cursor.getString(artistColumn)
+                val duration = cursor.getLong(durationColumn)
+
+                val contentUri = ContentUris.withAppendedId(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id
+                )
+
+                // Finally, we store the result in our defined list.
+                songs.add(Song(id,name,artist,duration))
+            }
+        }
+
+        return songs
+
+        /*return listOf(
             Song(1,"title1", "artist1", 215000),
             Song(2,"title2", "artist2", 215000),
             Song(3,"title3", "artist3", 215000),
@@ -174,7 +226,7 @@ class MainActivity : AppCompatActivity() {
             Song(8,"title8", "artist8", 215000),
             Song(9,"title9", "artist9", 215000),
             Song(10,"title10", "artist10", 215000)
-        )
+        )*/
     }
 
     // This fun change current mode to mode received in argument
