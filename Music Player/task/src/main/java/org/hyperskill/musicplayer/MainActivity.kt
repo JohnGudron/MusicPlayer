@@ -1,7 +1,9 @@
 package org.hyperskill.musicplayer
 
+import android.Manifest
 import android.app.AlertDialog
 import android.content.ContentUris
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.media.MediaPlayer
 import android.net.Uri
@@ -16,6 +18,8 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.findFragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -31,38 +35,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loadDialog: AlertDialog
     private lateinit var deleteDialog: AlertDialog
     private lateinit var fragmentContainer: FragmentContainerView
+    //var query: Cursor? = null
     var mediaPlayer: MediaPlayer? = null
     val vm: MusicPlayerViewModel by viewModels()
+
+
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val uri =
-            if (Build.VERSION.SDK_INT >= 29) {
-                MediaStore.Audio.Media.getContentUri(
-                    MediaStore.VOLUME_EXTERNAL
-                )
-            } else {
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-            }
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.DURATION
-        )
-        val selection = ""
-        val selectionArgs = arrayOf<String>()
-        val sortOrder = ""
-        val query = applicationContext.contentResolver.query(
-            uri,
-            projection,
-            selection,
-            selectionArgs,
-            sortOrder
-        )
+
 
 
         // Recycler View initiating
@@ -90,40 +74,72 @@ class MainActivity : AppCompatActivity() {
 
         val searchBtn = findViewById<Button>(R.id.mainButtonSearch)
         searchBtn.setOnClickListener {
-            val foundSongs = findSongs(query)// implement here finding functionality
-            if (mediaPlayer == null) {
-                vm.unPrepareMediaPlayer()
-                // TODO check case when nothing found
-                val newMediaPlayer = MediaPlayer.create(this,ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, foundSongs[0].id ))
-                var init = true
 
-                newMediaPlayer.setOnCompletionListener {
-                    it.seekTo(0)
-                    vm.unPrepareMediaPlayer()
-                    it.stop()
-                    it.prepare()
-                    changeCurrentTrackState(TrackState.STOPPED)
+            when {
+                ContextCompat.checkSelfPermission(this.applicationContext, Manifest.permission.READ_EXTERNAL_STORAGE) ==
+                        PackageManager.PERMISSION_GRANTED -> {
+                    //Toast.makeText(this, "Storage permission is granted", Toast.LENGTH_SHORT).show()
+                    val foundSongs = findSongs()// implement here finding functionality
+                    if (mediaPlayer == null) {
+                        vm.unPrepareMediaPlayer()
+                        // TODO check case when nothing found
+                        val newMediaPlayer = MediaPlayer.create(this,ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, foundSongs[0].id ))
+                        var init = true
+
+                        newMediaPlayer.setOnCompletionListener {
+                            it.seekTo(0)
+                            vm.unPrepareMediaPlayer()
+                            it.stop()
+                            it.prepare()
+                            changeCurrentTrackState(TrackState.STOPPED)
+                        }
+                        newMediaPlayer.setOnPreparedListener {
+                            if (init) mediaPlayer = newMediaPlayer
+                            init = false
+                            vm.prepareMediaPlayer()
+                            it.seekTo(0) // WARNING
+                            // Set the mutable var to the new instance
+                        }
+                    }
+                    vm.updateAllSongs(foundSongs)
+                    when (vm.playerState.value) {
+                        PlayerState.PLAY_MUSIC -> {
+                            // TODO need to find all cases of changing current track (I think only in setCurrentPlaylist fun maybe)
+                            vm.setCurrentPlaylist("All Songs", vm.allSongs.value ?: emptyList<Song>())
+                        }
+
+                        PlayerState.ADD_PLAYLIST -> {
+                            vm.setSelectorPlaylist(
+                                "All Songs",
+                                vm.allSongs.value?.map { SongSelector(it, SelectState.NOT_SELECTED) }
+                                    ?: emptyList<SongSelector>())
+                        }
+                    }
+
                 }
-                newMediaPlayer.setOnPreparedListener {
-                    if (init) mediaPlayer = newMediaPlayer
-                    init = false
-                    vm.prepareMediaPlayer()
-                    it.seekTo(0) // WARNING
-                    // Set the mutable var to the new instance
+                ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.READ_EXTERNAL_STORAGE) -> {
+                    AlertDialog.Builder(this)
+                        .setTitle("Permission required")
+                        .setMessage("This app needs permission to access this feature.")
+                        .setPositiveButton("Grant") { _, _ ->
+                            ActivityCompat.requestPermissions(
+                                this,arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                               1,
+                            )
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+
+                }
+                else -> {
+                    ActivityCompat.requestPermissions(this,
+                        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                        1,
+                    )
+
                 }
             }
-            vm.updateAllSongs(foundSongs)
-            when (vm.playerState.value) {
-                PlayerState.PLAY_MUSIC -> {
-                    // TODO need to find all cases of changing current track (I think only in setCurrentPlaylist fun maybe)
-                    vm.setCurrentPlaylist("All Songs",vm.allSongs.value ?: emptyList<Song>())
-                } PlayerState.ADD_PLAYLIST -> {
-                vm.setSelectorPlaylist(
-                    "All Songs",
-                    vm.allSongs.value?.map { SongSelector(it, SelectState.NOT_SELECTED) }
-                        ?: emptyList<SongSelector>())
-                }
-            }
+
 
         }
 
@@ -152,6 +168,40 @@ class MainActivity : AppCompatActivity() {
             loadDialog = createLoadDialog(loadDialogAdapter)
         }
 
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
+            1 -> {
+                if (grantResults.isNotEmpty() &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    val foundSongs = findSongs()
+                    vm.updateAllSongs(foundSongs)
+                    when (vm.playerState.value) {
+                        PlayerState.PLAY_MUSIC -> {
+                            // TODO need to find all cases of changing current track (I think only in setCurrentPlaylist fun maybe)
+                            vm.setCurrentPlaylist("All Songs", vm.allSongs.value ?: emptyList<Song>())
+                        }
+
+                        PlayerState.ADD_PLAYLIST -> {
+                            vm.setSelectorPlaylist(
+                                "All Songs",
+                                vm.allSongs.value?.map { SongSelector(it, SelectState.NOT_SELECTED) }
+                                    ?: emptyList<SongSelector>())
+                        }
+                    }
+                } else {
+                    Toast.makeText(this, "Songs cannot be loaded without permission", Toast.LENGTH_LONG).show()
+                }
+            }
+            else -> {
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -187,9 +237,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     // This fun for finding songs in DBMS
-    fun findSongs(query: Cursor?): List<Song> {
+    fun findSongs(): List<Song> {
         //TODO
         val songs = mutableListOf<Song>()
+        val uri =
+            if (Build.VERSION.SDK_INT >= 29) {
+                MediaStore.Audio.Media.getContentUri(
+                    MediaStore.VOLUME_EXTERNAL
+                )
+            } else {
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            }
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DURATION
+        )
+        val selection = ""
+        val selectionArgs = arrayOf<String>()
+        val sortOrder = ""
+        val query = applicationContext.contentResolver.query(
+            uri,
+            projection,
+            selection,
+            selectionArgs,
+            sortOrder
+        )
+
         query?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
@@ -203,12 +278,8 @@ class MainActivity : AppCompatActivity() {
                 val artist = cursor.getString(artistColumn)
                 val duration = cursor.getLong(durationColumn)
 
-                val contentUri = ContentUris.withAppendedId(
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id
-                )
-
                 // Finally, we store the result in our defined list.
-                songs.add(Song(id,name,artist,duration))
+                if (artist != null) songs.add(Song(id, name, artist, duration)) // TODO narrow place
             }
         }
 
