@@ -1,6 +1,7 @@
 package org.hyperskill.musicplayer
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.ContentUris
 import android.content.pm.PackageManager
@@ -33,13 +34,24 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loadDialog: AlertDialog
     private lateinit var deleteDialog: AlertDialog
     private lateinit var fragmentContainer: FragmentContainerView
+
+    private lateinit var personStore: SongStore //TODO
+
     var mediaPlayer: MediaPlayer? = null
     val vm: MusicPlayerViewModel by viewModels()
 
+    @SuppressLint("NewApi")
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+
+        val db = DbHelper(this).writableDatabase //TODO
+        personStore = SongStore(db)
+        personStore.insert("song","artist",123L)
+        val list = personStore.all()
+
 
         // Recycler View initiating
         adapter = SongRecyclerAdapter(vm.playerState.value!!, ::onItemPlayPauseBtnLongClick, ::onItemPlayPauseBtnClick)
@@ -66,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         val searchBtn = findViewById<Button>(R.id.mainButtonSearch)
         searchBtn.setOnClickListener {
-
+            //adapter.updateDataAndState(list.map { Track(it, TrackState.STOPPED) }, PlayerState.PLAY_MUSIC)
             when {
                 ContextCompat.checkSelfPermission(this.applicationContext, Manifest.permission.READ_EXTERNAL_STORAGE) ==
                         PackageManager.PERMISSION_GRANTED -> {
@@ -132,8 +144,6 @@ class MainActivity : AppCompatActivity() {
 
                 }
             }
-
-
         }
 
         vm.currentPlaylist.observe(this) { playlist ->
