@@ -35,5 +35,15 @@
         app:layout_constraintStart_toStartOf="parent"
         tools:layout="@layout/fragment_main_player_controller" />
 
+    <Button
+        android:id="@+id/test_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="START TEST"
+        app:layout_constraintBottom_toBottomOf="@+id/mainFragmentContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

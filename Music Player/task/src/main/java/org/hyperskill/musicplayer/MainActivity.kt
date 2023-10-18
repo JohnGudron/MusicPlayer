@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.ContentUris
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
 import android.os.Build
@@ -35,7 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var deleteDialog: AlertDialog
     private lateinit var fragmentContainer: FragmentContainerView
 
-    private lateinit var personStore: SongStore //TODO
+   // private lateinit var personStore: SongStore //TODO
 
     var mediaPlayer: MediaPlayer? = null
     val vm: MusicPlayerViewModel by viewModels()
@@ -46,11 +47,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val testBtn = findViewById<Button>(R.id.test_button)
+        testBtn.setOnClickListener {
+            startActivity(Intent(this, TestActivity::class.java))
+        }
 
-        val db = DbHelper(this).writableDatabase //TODO
-        personStore = SongStore(db)
-        personStore.insert("song","artist",123L)
-        val list = personStore.all()
+
+
+        // val db = DbHelper(this).writableDatabase //TODO
+        // personStore = SongStore(db)
+        // personStore.insert("song","artist",123L)
+        // val list = personStore.all()
 
 
         // Recycler View initiating
