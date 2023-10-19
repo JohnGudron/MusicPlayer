@@ -5,8 +5,6 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteStatement
-import android.os.Build
-import androidx.annotation.RequiresApi
 import org.intellij.lang.annotations.Language
 import java.io.Closeable
 import java.util.concurrent.atomic.AtomicReference
@@ -18,8 +16,7 @@ class DbHelper(
 ) : SQLiteOpenHelper(context, "musicPlayerDatabase.db", null, 1) {
 
     override fun onConfigure(db: SQLiteDatabase) {
-        db.execSQL("PRAGMA foreign_keys = 1")
-        db.execSQL("PRAGMA trusted_schema = 0")
+        super.onConfigure(db)
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -27,7 +24,7 @@ class DbHelper(
             """CREATE TABLE playlist(
             |    _id INTEGER PRIMARY KEY
             |,   playlistName TEXT NOT NULL
-            |,   songId TEXT NOT NULL
+            |,   songId INTEGER NOT NULL
             |)""".trimMargin()
         )
     }
@@ -37,9 +34,83 @@ class DbHelper(
     }
 }
 
-class SongStore(val db: SQLiteDatabase) : Closeable {
+class PlaylistStore(val db: SQLiteDatabase) : Closeable {
 
-    private companion object {
+    fun allPlaylists(allSongs: List<Song>): List<PlayList> {
+        val cursor = db.rawQuery("SELECT DISTINCT playlistName FROM playlist", null)
+        val result = mutableListOf<PlayList>()
+
+        try {
+            while (cursor.moveToNext()) {
+                val x = cursor.columnCount
+                val y = cursor.columnNames
+
+                val name = cursor.getString(0)
+                result.add(playListByName(name, allSongs))
+            }
+        } finally {
+            cursor.close()
+        }
+        return result
+        // TODO 1) выбрать все уникальные имена плейлистов, 2) используя ф-цию ниже выбрать все плейлисты по именам
+    }
+
+    fun playListByName(name: String, allSongs: List<Song>): PlayList {
+        val cursor = db.rawQuery("SELECT * FROM playlist WHERE playlistName = ?", arrayOf(name))
+        val list = mutableListOf<Song>()
+        try {
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(1)
+                val song = allSongs.find { it.id == id }
+                if (song != null) list.add(song)
+            }
+        } finally {
+            cursor.close()
+        }
+        return PlayList(name, list)
+    }
+
+    private val insertRef = AtomicReference<SQLiteStatement>()
+
+    //@RequiresApi(Build.VERSION_CODES.O)
+    fun insert(playlistName: String, songId: Long) {
+        withStatement(insertRef, "INSERT INTO playlist (playlistName, songId) VALUES (?, ?)") {
+            bindString(1, playlistName)
+            bindLong(2, songId)
+            executeInsert()
+        }
+    }
+
+    private val deleteRef = AtomicReference<SQLiteStatement>()
+    fun deletePlaylist(playlistName: String) {
+        withStatement(deleteRef, "DELETE FROM playlist WHERE playlistName=?") {
+            bindString(1, playlistName)
+            executeInsert()
+        }
+    }
+
+    override fun close() {
+        insertRef.getAndSet(null)?.close()
+        deleteRef.getAndSet(null)?.close()
+        /*updateRef.getAndSet(null)?.close()
+        deleteRef.getAndSet(null)?.close()*/
+    }
+
+    private inline fun <R> withStatement(
+        ref: AtomicReference<SQLiteStatement>,
+        @Language("SQL") query: String,
+        block: SQLiteStatement.() -> R,
+    ): R {
+        val statement = ref.getAndSet(null) ?: db.compileStatement(query)
+        try {
+            return statement.block()
+        } finally {
+            ref.getAndSet(statement)?.close()
+        }
+    }
+}
+
+   /* private companion object {
         private val idCol = arrayOf("_id")
         private val songCols = arrayOf("playlistName", "songId")
     }
@@ -117,7 +188,7 @@ class SongStore(val db: SQLiteDatabase) : Closeable {
         deleteRef.getAndSet(null)?.close()
     }
 
-    /**
+    *//**
      * Poll for an existing prepared statement or create a new one.
      * This ensures thread-safe statement reuse:
      * any thread can take or prepare a statement,
@@ -125,7 +196,7 @@ class SongStore(val db: SQLiteDatabase) : Closeable {
      *
      * The [ref] must be used with the same [query].
      * The statement provided to the [block] must never leak outside.
-     */
+     *//*
     private inline fun <R> withStatement(
         ref: AtomicReference<SQLiteStatement>,
         @Language("SQL") query: String,
@@ -137,5 +208,4 @@ class SongStore(val db: SQLiteDatabase) : Closeable {
         } finally {
             ref.getAndSet(statement)?.close()
         }
-    }
-}
+    }*/

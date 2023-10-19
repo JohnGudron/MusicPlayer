@@ -25,7 +25,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.lang.IllegalStateException
 
-
 class MainActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
@@ -36,7 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var deleteDialog: AlertDialog
     private lateinit var fragmentContainer: FragmentContainerView
 
-   // private lateinit var personStore: SongStore //TODO
+    private lateinit var playlistStore: PlaylistStore //TODO
 
     var mediaPlayer: MediaPlayer? = null
     val vm: MusicPlayerViewModel by viewModels()
@@ -47,18 +46,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val testBtn = findViewById<Button>(R.id.test_button)
-        testBtn.setOnClickListener {
-            startActivity(Intent(this, TestActivity::class.java))
+        val db = DbHelper(this).writableDatabase //TODO
+        playlistStore = PlaylistStore(db)
+
+        // retrieving all playlists from the DB and adding them to VM
+        playlistStore.allPlaylists(findSongs()).forEach {
+            vm.addPlaylist(it)
         }
-
-
-
-        // val db = DbHelper(this).writableDatabase //TODO
-        // personStore = SongStore(db)
-        // personStore.insert("song","artist",123L)
-        // val list = personStore.all()
-
 
         // Recycler View initiating
         adapter = SongRecyclerAdapter(vm.playerState.value!!, ::onItemPlayPauseBtnLongClick, ::onItemPlayPauseBtnClick)
@@ -92,7 +86,7 @@ class MainActivity : AppCompatActivity() {
                     val foundSongs = findSongs()// implement here finding functionality
                     if (mediaPlayer == null) {
                         vm.unPrepareMediaPlayer()
-                        // TODO check case when nothing found
+                        // TODO try change to initMediaPlayer function
                         val newMediaPlayer = MediaPlayer.create(this,ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, foundSongs[0].id ))
                         var init = true
 
@@ -247,6 +241,27 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
+    fun initMediaPlayer() {
+        vm.unPrepareMediaPlayer()
+        // TODO check case when nothing found
+        val newMediaPlayer = MediaPlayer.create(this,ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, vm.currentTrack.value!!.song.id ))
+        var init = true
+
+        newMediaPlayer.setOnCompletionListener {
+            it.seekTo(0)
+            vm.unPrepareMediaPlayer()
+            it.stop()
+            it.prepare()
+            changeCurrentTrackState(TrackState.STOPPED)
+        }
+        newMediaPlayer.setOnPreparedListener {
+            if (init) mediaPlayer = newMediaPlayer
+            init = false
+            vm.prepareMediaPlayer()
+            it.seekTo(0) // WARNING
+            // Set the mutable var to the new instance
+        }
+    }
     private fun findSongs(): List<Song> {
         val songs = mutableListOf<Song>()
         val uri =
@@ -337,7 +352,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun addPlaylist(name:String, songs: List<Song>) {
+        // inserting DB here
+        // TODO should implement all features
+        if (name in (vm.allPlaylists.value?.map { it.name } ?: listOf<String>())) {
+            playlistStore.deletePlaylist(name)
+            vm.deletePlaylistByName(name)
+        }
         vm.addPlaylist(PlayList(name,songs))
+        songs.forEach {
+            playlistStore.insert(name, it.id)
+        }
+    }
+
+    fun deletePlaylistFromDB(name: String) {
+
     }
 
     private fun getPlaylistByName(name:String): PlayList {
@@ -386,7 +414,13 @@ class MainActivity : AppCompatActivity() {
                 val selectedPlaylist = getPlaylistByName(adapter.getItem(position)!!)
                 if (vm.playerState.value == PlayerState.PLAY_MUSIC) {
                     if (vm.setCurrentPlaylist(selectedPlaylist.name,selectedPlaylist.songs)) {
-                        changeTrackMP(false)
+                        // TODO решить всегда ли вызывать эту функцию
+                        if (mediaPlayer == null) {
+                            initMediaPlayer()
+                        }
+                        else changeTrackMP(false)
+                        val x = mediaPlayer
+println()
                     }
                 } else {
                     val alreadySelected = getSelectedSongs()
@@ -414,6 +448,8 @@ class MainActivity : AppCompatActivity() {
                         vm.allSongs.value?.map { SongSelector(it, SelectState.NOT_SELECTED) }
                             ?: emptyList())
                 }
+                playlistStore.deletePlaylist(selectedPlaylist.name)
+                // TODO implement deleting playlist from db
                 vm.deletePlaylistByName(selectedPlaylist.name)
                 // !Just a reminder that there maybe an error, cause observers triggered "data" property inside recyclerView adapter
             }
