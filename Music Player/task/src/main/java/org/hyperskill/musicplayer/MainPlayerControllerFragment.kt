@@ -93,7 +93,7 @@ class MainPlayerControllerFragment : Fragment() {
         handler = Handler(Looper.getMainLooper())
 
         activity.vm.currentTrack.observe(activity) {
-            // TODO maybe it worth to replace all seekBars features inside startUpdatingSeekbar
+            // maybe it worth to replace all seekBars features inside startUpdatingSeekbar
             if (activity.mediaPlayer != null) {
                 val duration = activity.mediaPlayer!!.duration
                 seekBar.max = if (duration % 1000 > 0) duration / 1000 else duration / 1000 + 1
@@ -108,9 +108,7 @@ class MainPlayerControllerFragment : Fragment() {
 
     private fun startUpdatingSeekBar(mediaPlayer: MediaPlayer?, activity: MainActivity) {
         totalTime.text = (mediaPlayer?.duration ?: 0).toLong().toFormattedTime()
-
         thread {
-            // TODO
             handler.removeCallbacksAndMessages(null)
 
             handler.postDelayed(object : Runnable {
@@ -118,15 +116,13 @@ class MainPlayerControllerFragment : Fragment() {
                     if (mediaPlayer != null && !isUserSeeking && activity.vm.mediaPlayerState.value!!) {
                         val currentTimeMillis =
                             if (mediaPlayer.currentPosition % 1000 > 0) mediaPlayer.currentPosition + mediaPlayer.currentPosition % 1000 else mediaPlayer.currentPosition
-                        seekBar.progress = currentTimeMillis / 1000 //TODO
+                        seekBar.progress = currentTimeMillis / 1000
                         currentTime.text =
-                            (currentTimeMillis.toLong()).toFormattedTime() // TODO
+                            (currentTimeMillis.toLong()).toFormattedTime()
                     }
                     handler.postDelayed(this, 100) // Update every second
                 }
-
             }, 0)
         }
-
     }
 }

@@ -103,7 +103,6 @@ class SongViewHolder(songView: View) : RecyclerView.ViewHolder(songView) {
         title.text = song.title
         duration.text = song.duration.toFormattedTime()
     }
-
 }
 
 class SelectorViewHolder(selectorView: View) : RecyclerView.ViewHolder(selectorView) {

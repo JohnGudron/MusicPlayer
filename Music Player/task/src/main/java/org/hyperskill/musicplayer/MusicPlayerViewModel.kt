@@ -72,18 +72,14 @@ class MusicPlayerViewModel : ViewModel() {
                 it.state = currentTrack.value!!.state
             }
         }
-        if (setCurrentTrack) _currentTrack.value = tracks.first() // no need to use selectCurrentTrack fun cause changing current track won't affect other entities
+        // no need to use selectCurrentTrack fun cause changing current track won't affect other entities
+        if (setCurrentTrack) _currentTrack.value = tracks.first()
         _currentPlaylist.value = Pair(name,tracks)
 
         return setCurrentTrack // need for changing track in MP
     }
 
     fun setSelectorPlaylist(name: String, songs: List<SongSelector>) {
-        //val tracks = songs.map { SongSelector(it, SelectState.NOT_SELECTED) }
-        /*tracks.forEach {
-            // saving current track state
-            if (it.song.id == currentTrack.value?.song?.id) it.state = currentTrack.value!!.state
-        }*/
         _currentSelectorList.value = Pair(name,songs)
     }
 
@@ -99,45 +95,16 @@ class MusicPlayerViewModel : ViewModel() {
         _currentPlaylist.value = Pair(_currentPlaylist.value!!.first,updatedPlaylist)
     }
 
-    fun changeCurrentTrackState(newState: TrackState) {
-        if (newState == TrackState.STOPPED) {
-            _currentTrack.value!!.state = newState
-        } else {
-            _currentTrack.value!!.state = if (currentTrack.value!!.state == TrackState.PLAYING) TrackState.PAUSED else TrackState.PLAYING
-        }
-        changeTrackState(currentTrack.value!!, _currentTrack.value!!.state)
-    }
-
     fun selectCurrentTrack(track: Track) {
         if (track.song.id != currentTrack.value?.song?.id && currentTrack.value != null) { // new current track chosen
             changeTrackState(currentTrack.value!!, TrackState.STOPPED) // changing state of the old current track
             _currentTrack.value = track
             changeTrackState(track, track.state)
-        } else { // there is no current track now or the same track chosen
+        } else {
+            // there is no current track now or the same track chosen
             _currentTrack.value = track
             changeTrackState(currentTrack.value!!, track.state)
         }
-        /*if (currentTrack.value == null) { // there is no current track now
-            _currentTrack.value = track
-            changeCurrentTrackState(TrackState.PLAYING)
-            changeTrackState(currentTrack!!.value!!, currentTrack.value!!.state)
-        } else {
-            if (track.song.id == currentTrack.value?.song?.id) {  // same track chosen
-                if (currentTrack.value!!.state == TrackState.PLAYING) {
-                    changeCurrentTrackState(TrackState.PAUSED)
-                    changeTrackState(currentTrack!!.value!!, currentTrack.value!!.state)
-                } else {
-                    changeCurrentTrackState(TrackState.PLAYING)
-                    changeTrackState(currentTrack!!.value!!, currentTrack.value!!.state)
-                }
-            } else { // new current track chosen
-                changeTrackState(currentTrack!!.value!!, TrackState.STOPPED) // changing state of the old current track
-                _currentTrack.value = track
-                changeCurrentTrackState(TrackState.PLAYING)
-                changeTrackState(currentTrack!!.value!!, currentTrack.value!!.state)
-            }
-        }*/
-
     }
 
     fun changePlayerState(newState: PlayerState) {
